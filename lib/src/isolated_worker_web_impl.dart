@@ -1,10 +1,12 @@
 import 'dart:async' show Completer, StreamSubscription;
 import 'dart:collection' show LinkedHashMap;
-import 'dart:html';
-
-import 'isolated_worker_web.dart';
+import 'dart:js_interop';
+import 'dart:js_interop_unsafe';
+import 'package:isolated_worker/js_isolated_worker.dart';
+import 'package:web/web.dart';
 
 const int _kMaxCallbackMessageId = 1000;
+bool get workerSupported => window.hasProperty('Worker'.toJS).toDart;
 
 class JsIsolatedWorkerImpl implements JsIsolatedWorker {
   factory JsIsolatedWorkerImpl() => _instance;
@@ -44,11 +46,13 @@ class JsIsolatedWorkerImpl implements JsIsolatedWorker {
   int _callbackMessageId = 0;
 
   void _init() {
-    if (Worker.supported) {
+    if (workerSupported) {
       final Worker worker = Worker('worker.js');
 
       _workerCompleter.complete(worker);
-      _workerMessages = worker.onMessage.listen(_workerMessageReceiver);
+      worker.onmessage = (MessageEvent message) {
+        _workerMessageReceiver(message);
+      }.toJS;
     } else {
       _workerCompleter.complete(null);
     }
@@ -85,7 +89,9 @@ class JsIsolatedWorkerImpl implements JsIsolatedWorker {
 
     final Worker? worker = await _worker;
     if (worker != null) {
-      worker.postMessage(['\$init_scripts', ...scripts]);
+      worker.postMessage(
+        ['\$init_scripts'.toJS, ...scripts.map((e) => e.toJS)].toJS,
+      );
       return true;
     }
     return false;
@@ -93,8 +99,8 @@ class JsIsolatedWorkerImpl implements JsIsolatedWorker {
 
   @override
   Future<dynamic> run({
-    required dynamic functionName,
-    required dynamic arguments,
+    required String functionName,
+    required JSAny arguments,
     Future<dynamic> Function()? fallback,
   }) async {
     assert(functionName != null);
@@ -106,14 +112,14 @@ class JsIsolatedWorkerImpl implements JsIsolatedWorker {
     }
     _resetCurrentCallbackMessageIdIfReachedMax();
     final Completer<dynamic> callbackCompleter = Completer<dynamic>();
-    final List<dynamic> callbackMessage = <dynamic>[
-      _callbackMessageId++,
-      functionName,
-      arguments,
+    final List<JSAny?> callbackMessage = <JSAny?>[
+      (_callbackMessageId++).toJS,
+      functionName.jsify(),
+      arguments.jsify(),
     ];
 
     _callbackObjects[callbackMessage] = callbackCompleter;
-    worker.postMessage(callbackMessage);
+    worker.postMessage(callbackMessage.toJS);
     return callbackCompleter.future;
   }
 

@@ -1,3 +1,5 @@
+import 'dart:js_interop';
+
 import 'isolated_worker_web_impl.dart'
     if (dart.library.io) 'isolated_worker_web_unimpl.dart';
 
@@ -61,8 +63,8 @@ abstract class JsIsolatedWorker {
   /// const result = callback(arguments);
   /// ```
   Future<dynamic> run({
-    required dynamic functionName,
-    required dynamic arguments,
+    required String functionName,
+    required JSAny arguments,
     Future<dynamic> Function()? fallback,
   });
 
