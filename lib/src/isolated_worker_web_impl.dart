@@ -25,8 +25,7 @@ class JsIsolatedWorkerImpl implements JsIsolatedWorker {
   /// - [0] is `id`
   /// - [1] is `functionName`
   /// - [2] is `arguments`
-  final LinkedHashMap<List<dynamic>, dynamic> _callbackObjects =
-      LinkedHashMap<List<dynamic>, dynamic>(
+  final LinkedHashMap<List<dynamic>, dynamic> _callbackObjects = LinkedHashMap<List<dynamic>, dynamic>(
     equals: (List<dynamic> a, List<dynamic> b) {
       return a[0] == b[0];
     },
@@ -47,7 +46,7 @@ class JsIsolatedWorkerImpl implements JsIsolatedWorker {
 
   void _init() {
     if (workerSupported) {
-      final Worker worker = Worker('worker.js');
+      final Worker worker = Worker('worker.js'.toJS);
 
       _workerCompleter.complete(worker);
       worker.onmessage = (MessageEvent message) {
@@ -72,8 +71,7 @@ class JsIsolatedWorkerImpl implements JsIsolatedWorker {
     /// [3] => value
     final List<dynamic> messageData = message.data as List<dynamic>;
 
-    final Completer<dynamic> callbackCompleter =
-        _callbackObjects.remove(messageData) as Completer<dynamic>;
+    final Completer<dynamic> callbackCompleter = _callbackObjects.remove(messageData) as Completer<dynamic>;
     final String type = messageData[2] as String;
     final dynamic resultOrError = messageData[3];
     if (type == 'result') {
