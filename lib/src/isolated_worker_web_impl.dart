@@ -69,7 +69,7 @@ class JsIsolatedWorkerImpl implements JsIsolatedWorker {
     /// [1] => functionName
     /// [2] => return type ("result" or "error")
     /// [3] => value
-    final List<dynamic> messageData = message.data as List<dynamic>;
+    final List<dynamic> messageData = (message.data.dartify()) as List<dynamic>;
 
     final Completer<dynamic> callbackCompleter = _callbackObjects.remove(messageData) as Completer<dynamic>;
     final String type = messageData[2] as String;
@@ -101,8 +101,6 @@ class JsIsolatedWorkerImpl implements JsIsolatedWorker {
     required JSAny arguments,
     Future<dynamic> Function()? fallback,
   }) async {
-    assert(functionName != null);
-
     final Worker? worker = await _worker;
     // worker not available
     if (worker == null) {
@@ -110,14 +108,16 @@ class JsIsolatedWorkerImpl implements JsIsolatedWorker {
     }
     _resetCurrentCallbackMessageIdIfReachedMax();
     final Completer<dynamic> callbackCompleter = Completer<dynamic>();
-    final List<JSAny?> callbackMessage = <JSAny?>[
-      (_callbackMessageId++).toJS,
-      functionName.jsify(),
-      arguments.jsify(),
+    final callbackMessage = [
+      (_callbackMessageId++),
+      functionName,
+      arguments,
     ];
 
     _callbackObjects[callbackMessage] = callbackCompleter;
-    worker.postMessage(callbackMessage.toJS);
+
+    final callbackMessageJS = callbackMessage.map((e) => e.jsify()).jsify();
+    worker.postMessage(callbackMessageJS);
     return callbackCompleter.future;
   }
 
